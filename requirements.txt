@@ -1,0 +1,6 @@
+inspect-ai
+numpy
+pandas
+matplotlib
+scipy
+openai
