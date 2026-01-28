@@ -11,7 +11,7 @@ print()
 # Run a game with all the mechanics
 env = RedvsBlueEnv(num_players=5, max_rounds=10, seed=123)
 
-print(f"Game initialized:")
+print("Game initialized:")
 print(f"  Players: {env.player_ids}")
 print(f"  Roles: {env.roles}")
 print(f"  Patch deck: {len(env.patch_deck)} cards")
@@ -89,7 +89,7 @@ while not env.done and round_count < 20:
 
 print()
 print(f"Game ended after {round_count} rounds")
-print(f"Final state:")
+print("Final state:")
 print(f"  Done: {env.done}")
 print(f"  Patch track: {env.patch_track}")
 print(f"  Fired players: {env.fired_players}")
