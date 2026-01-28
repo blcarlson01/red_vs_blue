@@ -48,7 +48,7 @@ The `advanced_analysis.py` script generates comprehensive insights:
 
 **Per-Role Performance**
 - Win rates by role (blue, red, apt_leader)
-- Survival rates per role
+- Employed rates per role
 - Average game length by role
 - Belief accuracy by role
 
@@ -97,6 +97,33 @@ python advanced_analysis.py results/
 # - results/aggregated/summary.csv (aggregated metrics)
 # - results/aggregated/all_results.jsonl (per-game data)
 ```
+
+## Player Confusion Analysis
+
+Analyzes player statements and reasoning to detect confusion:
+
+```bash
+# Analyze a single eval file for player confusion
+python -m red_vs_blue.analysis.confusion_analysis results/game.eval [model_name]
+
+# Examples:
+python -m red_vs_blue.analysis.confusion_analysis results/game.eval claude-opus
+python -m red_vs_blue.analysis.confusion_analysis results/game.eval claude-haiku
+```
+
+This script:
+1. Extracts all player statements from the public game log
+2. Uses an LLM to analyze each player's reasoning for signs of confusion
+3. Identifies confusion types: rule misunderstanding, state confusion, strategic inconsistency, etc.
+4. Provides specific evidence and explanations for detected confusion
+5. Generates game-level improvement suggestions based on confusion patterns
+6. Saves detailed results as JSON for further analysis
+
+Output includes:
+- Per-player confusion analysis with evidence
+- Game improvement suggestions by category (Rules/Information/Strategy/Tutorial)
+- Confusion statistics across all games
+- Actionable recommendations for rules/UI/documentation improvements
 
 ### Generating Publication-Ready Infographics
 

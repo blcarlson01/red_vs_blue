@@ -147,7 +147,7 @@ ROUND SEQUENCE:
 ├── POWER PHASE (if applicable)
 │   ├── After 2nd red: INVESTIGATE
 │   ├── After 3rd red: SPECIAL ELECTION
-│   └── After 4th+ red: EXECUTION
+│   └── After 4th+ red: FIRE
 └── RESOLUTION
     └── Advance to next CISO
 ```
@@ -181,33 +181,90 @@ python test_rules.py
 ```
 
 ### Running the evaluation
+```bash
 inspect eval red_vs_blue.task:red_vs_blue_task \
   --model mistral,gemma,phi \
   --limit 50 \
   --log-dir results/
 
-  inspect eval red_vs_blue.task:red_vs_blue_task \
-  --model mistral,gemma,phi \
+# Or with a local model service:
+inspect eval red_vs_blue.task:red_vs_blue_task \
+  --model ollama/gpt-oss:20b \
   --limit 50 \
   --log-dir results/ \
-  --model-base-url http://localhost:8000/v1
-
-### Generate Analysis
-```bash
-python -m red_vs_blue.analysis.aggregate_results results/
-python -m red_vs_blue.analysis.plots results/
+  --model-base-url http://localhost:11434/v1
 ```
 
-## Optional
-inspect eval red_vs_blue.task:red_vs_blue_task \
-  --scorer red_vs_blue.scoring:RedvsBlueScorer \
-  --model mistral \
-  --limit 50
+### Generate Complete Analysis
 
-This is useful when:
-- You want multiple scorers
-- You want leaderboard-style evaluation
-- You want diagnostic runs
+Run all analysis tools at once with the unified script:
+
+```bash
+python -m red_vs_blue.analysis.run_all_analysis results/
+```
+
+This will:
+1. ✓ Aggregate results from .eval files
+2. ✓ Generate statistics
+3. ✓ Create plots and visualizations
+4. ✓ Generate advanced analysis
+5. ✓ Create infographics
+6. ✓ Generate interactive HTML viewer
+7. ✓ Analyze player confusion patterns
+
+**Options:**
+
+```bash
+# Skip confusion analysis (if model unavailable)
+python -m red_vs_blue.analysis.run_all_analysis results/ --skip-confusion
+
+# Run only specific analyses
+python -m red_vs_blue.analysis.run_all_analysis results/ --only aggregate,statistics,plots
+
+# Use a custom model for confusion analysis
+python -m red_vs_blue.analysis.run_all_analysis results/ --model anthropic/claude-opus
+
+# With custom model base URL
+python -m red_vs_blue.analysis.run_all_analysis results/ \
+  --model ollama/gpt-oss:20b \
+  --model-base-url http://localhost:11434/v1
+```
+
+**Available analyses:**
+- `aggregate` - Combine results from all eval files
+- `statistics` - Generate statistical summaries
+- `plots` - Create visualization plots
+- `advanced` - Advanced analysis metrics
+- `infographics` - Create infographic visualizations
+- `viewer` - Interactive HTML results viewer
+- `confusion` - LLM-based player confusion analysis
+
+### Individual Analysis Tools
+
+Run individual analysis tools separately if needed:
+
+```bash
+# Aggregate results
+python -m red_vs_blue.analysis.aggregate_results results/
+
+# Generate statistics
+python -m red_vs_blue.analysis.statistics results/
+
+# Create plots
+python -m red_vs_blue.analysis.plots results/
+
+# Advanced analysis
+python -m red_vs_blue.analysis.advanced_analysis results/
+
+# Infographics
+python -m red_vs_blue.analysis.advanced_infographics results/
+
+# Interactive HTML viewer
+python -m red_vs_blue.analysis.results_viewer results/your_eval_file.eval results_viewer.html
+
+# Confusion analysis (requires model)
+python -m red_vs_blue.analysis.confusion_analysis results/your_eval_file.eval [model_name]
+```
 
 ## Plots
 
@@ -230,3 +287,14 @@ Plot 3 — Win rate vs epistemics
 def plot_win_vs_alignment(results)
 Key finding:
 Win rate alone under-predicts epistemic robustness.
+
+## Troubleshooting
+If there is a:
+
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f7e6' in position 5510: character maps to <undefined>
+*** You may need to add PYTHONIOENCODING=utf-8 to your environment ***
+
+Do the following in your environment
+```
+$env:PYTHONIOENCODING = "utf-8"
+```

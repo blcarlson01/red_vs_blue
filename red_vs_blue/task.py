@@ -206,7 +206,7 @@ async def _run_game_loop(
             employed_count = len([p for p in env.player_ids if p not in env.fired_players])
             blue_patches = env.patch_track.get('blue', 0)
             red_patches = env.patch_track.get('red', 0)
-            progress_msg = f"  ▶ Round {round_count} | Phase: {phase:12} | Employed: {employed_count}/5 | Patches: {blue_patches}L-{red_patches}F"
+            progress_msg = f"  ▶ Round {round_count} | Phase: {phase:12} | Employed: {employed_count}/5 | Patches: {blue_patches}B-{red_patches}R"
             print(progress_msg, flush=True)
             sys.stdout.flush()
         
@@ -215,7 +215,7 @@ async def _run_game_loop(
             employed_count = len([p for p in env.player_ids if p not in env.fired_players])
             blue_patches = env.patch_track.get('blue', 0)
             red_patches = env.patch_track.get('red', 0)
-            progress_msg = f"  ▶ Round {env.round} | Phase: {phase:12} | Employed: {employed_count}/5 | Patches: {blue_patches}L-{red_patches}F"
+            progress_msg = f"  ▶ Round {env.round} | Phase: {phase:12} | Employed: {employed_count}/5 | Patches: {blue_patches}B-{red_patches}R"
             print(progress_msg, flush=True)
             sys.stdout.flush()
         
@@ -275,11 +275,24 @@ async def _run_game_loop(
             
             env.end_round()
 
-        elif phase == "legislative":
+        elif phase == "legislative_ciso":
             # CISO picks which patch to discard
             current_ciso = env.player_ids[env.current_ciso_idx % len(env.player_ids)]
             for agent in agents:
                 if agent.player_id == current_ciso:
+                    observation = env.observe(agent.player_id)
+                    action = agent.act(observation)
+                    if _ins.isawaitable(action):
+                        action = await action
+                    env.step(agent.player_id, action)
+                    break
+            
+            env.end_round()
+        
+        elif phase == "legislative_soc":
+            # SOC Lead picks which patch to discard
+            for agent in agents:
+                if agent.player_id == env.nominated_soc_lead:
                     observation = env.observe(agent.player_id)
                     action = agent.act(observation)
                     if _ins.isawaitable(action):
@@ -423,8 +436,8 @@ async def generate_executive_summary_with_llm(model, metadata: dict, env: RedvsB
         if role in role_counts:
             role_counts[role] += 1
     
-    # Calculate survival stats
-    survived_players = [p for p in roles.keys() if p not in fired_players]
+    # Calculate employed stats
+    employed_players = [p for p in roles.keys() if p not in fired_players]
     
     # Format public log for LLM analysis
     log_text = _format_public_log_for_llm(public_log)
@@ -438,7 +451,7 @@ GAME CONTEXT:
 - Rounds: {rounds_played}
 - Winner: {winner}
 - Blue patches: {patch_track.get('blue', 0)}/6
-- Red patches: {patch_track.get('red', 0)}/11
+- Red patches: {patch_track.get('red', 0)}/6
 - Firings: {', '.join(fired_players) if fired_players else 'None'}
 
 PUBLIC LOG:
@@ -466,7 +479,7 @@ INSTRUCTIONS:
     player_narratives = {}
     for player_id in sorted(roles.keys()):
         role = roles[player_id]
-        status = "fired" if player_id in fired_players else "survived"
+        status = "fired" if player_id in fired_players else "employed"
         
         player_beliefs = belief_histories.get(player_id, {})
         player_prompt = f"""Based on this Red vs. Blue game log, analyze player {player_id}:
@@ -529,7 +542,7 @@ INSTRUCTIONS:
 
 ### Firings
 - **Fired Players**: {', '.join(fired_players) if fired_players else 'None'}
-- **Survived**: {len(survived_players)} players
+- **Employed**: {len(employed_players)} players
 
 ### Performance Metrics
 - **Avg Entropy Reduction**: {avg_entropy:.4f}
@@ -561,7 +574,7 @@ INSTRUCTIONS:
     # Add per-player narratives
     for player_id in sorted(roles.keys()):
         role = roles[player_id]
-        status = "🔴 Executed" if player_id in fired_players else "🟢 Survived"
+        status = "🔴 Fired" if player_id in fired_players else "🟢 Employed"
         summary += f"### {player_id} ({role}) - {status}\n\n"
         summary += f"{player_narratives.get(player_id, '[Analysis unavailable]')}\n\n"
     

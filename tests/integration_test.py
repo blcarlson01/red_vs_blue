@@ -45,10 +45,17 @@ while not env.done and round_count < 20:
             env.step(player_id, {"vote": vote})
         env.end_round()
         
-    elif env.current_phase == "legislative":
+    elif env.current_phase in ["legislative_ciso", "legislative"]:
         # CISO picks patch to discard (always discard first)
         ciso = env.player_ids[env.current_ciso_idx % len(env.player_ids)]
         env.step(ciso, {"discard_patch": 0})
+        env.end_round()
+    
+    elif env.current_phase == "legislative_soc":
+        # SOC Lead picks patch to discard
+        soc_lead = env.nominated_soc_lead
+        if soc_lead:
+            env.step(soc_lead, {"discard_patch": 0})
         env.end_round()
         
     elif env.current_phase == "power":

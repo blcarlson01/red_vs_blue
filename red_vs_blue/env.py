@@ -61,7 +61,8 @@ class RedvsBlueEnv:
         self.investigation_results: Dict[str, str] = {}  # player_id -> role (if investigated)
 
         # Game phases
-        self.current_phase = "discussion"  # discussion → nomination → voting → legislative → power → resolution
+        self.current_phase = "discussion"  # discussion → nomination → voting → legislative_ciso → legislative_soc → power → resolution
+        self.legislative_stage = None  # "ciso" or "soc" during legislative phase
         
         # Patch deck management
         self.patch_deck: List[str] = []
@@ -165,6 +166,16 @@ class RedvsBlueEnv:
             "council_votes": self.council_votes.copy(),  # Include current votes
         }
 
+        # During legislative phase, CISO and SOC Lead can see the drawn patches
+        if self.current_phase == "legislative_ciso":
+            if player_id == current_ciso:
+                # CISO sees all 3 drawn cards
+                obs["drawn_cards"] = list(self.drawn_cards)
+        elif self.current_phase == "legislative_soc":
+            if player_id == self.nominated_soc_lead:
+                # SOC Lead sees remaining 2 cards after CISO discarded
+                obs["drawn_cards"] = list(self.drawn_cards)
+
         # Red asymmetry: Reds know each other
         if self.roles[player_id] in ["red", "apt_leader"]:
             obs["faction"] = "red"
@@ -259,12 +270,19 @@ class RedvsBlueEnv:
             if vote in ["yes", "no"]:
                 self.council_votes[player_id] = vote
 
-        elif self.current_phase == "legislative":
-            # Legislative session: ciso picks patch
+        elif self.current_phase == "legislative_ciso":
+            # Legislative session: CISO picks which patch to discard
             if player_id == self.player_ids[self.current_ciso_idx % len(self.player_ids)]:
                 discard = action.get("discard_patch")
                 if discard is not None and discard in [0, 1, 2]:
-                    self._execute_legislative_session(discard)
+                    self._execute_ciso_discard(discard)
+        
+        elif self.current_phase == "legislative_soc":
+            # Legislative session: SOC Lead picks which patch to discard
+            if player_id == self.nominated_soc_lead:
+                discard = action.get("discard_patch")
+                if discard is not None and discard in [0, 1]:
+                    self._execute_soc_discard(discard)
 
         elif self.current_phase == "power":
             # Execute ciso power (investigate, special election, fire)
@@ -300,6 +318,20 @@ class RedvsBlueEnv:
         if self.current_phase == "voting":
             # Count and resolve votes
             self._resolve_council_vote()
+        
+        elif self.current_phase == "legislative_ciso":
+            # If we're still in legislative_ciso (no action was taken), auto-resolve
+            # This can happen if the CISO never submitted a discard action
+            if self.drawn_cards and len(self.drawn_cards) == 3:
+                # Auto-resolve with CISO discarding first card
+                self._execute_ciso_discard(0)
+        
+        elif self.current_phase == "legislative_soc":
+            # If we're still in legislative_soc (no action was taken), auto-resolve
+            # This can happen if the SOC Lead never submitted a discard action
+            if self.drawn_cards and len(self.drawn_cards) == 2:
+                # Auto-resolve with SOC Lead discarding first card
+                self._execute_soc_discard(0)
 
         elif self.current_phase == "legislative":
             # If we're still in legislative (no action was taken), we need to handle it
@@ -384,7 +416,8 @@ class RedvsBlueEnv:
                 self.nominated_soc_lead = None
                 return
 
-            self.current_phase = "legislative"
+            self.current_phase = "legislative_ciso"
+            self.legislative_stage = "ciso"
             self.council_votes.clear()
             self._draw_patch_cards()
         else:
@@ -424,9 +457,9 @@ class RedvsBlueEnv:
         self.drawn_cards = [self.patch_deck.pop() for _ in range(3)]
         self.public_log.append("Three patches drawn for legislative session")
 
-    def _execute_legislative_session(self, ciso_discard_idx: int):
-        """CISO picks which patch to discard."""
-        if not hasattr(self, 'drawn_cards') or len(self.drawn_cards) < 3:
+    def _execute_ciso_discard(self, ciso_discard_idx: int):
+        """CISO picks which patch to discard (step 1 of legislative session)."""
+        if not hasattr(self, 'drawn_cards') or len(self.drawn_cards) != 3:
             return
 
         # CISO discards one of 3
@@ -434,13 +467,24 @@ class RedvsBlueEnv:
             ciso_discard_idx = 0  # Default if invalid
         discarded = self.drawn_cards.pop(ciso_discard_idx)
         self.discard_pile.append(discarded)
-
-        # SOC Lead discards one of remaining 2 (random for now)
-        # TODO: Get from SOC Lead action via separate phase
-        soc_lead_discard_idx = self.rng.randint(0, 1)
-        discarded = self.drawn_cards.pop(soc_lead_discard_idx)
+        self.public_log.append(f"CISO discarded a patch (in secret)")
+        
+        # Transition to SOC Lead phase
+        self.current_phase = "legislative_soc"
+        self.legislative_stage = "soc"
+    
+    def _execute_soc_discard(self, soc_discard_idx: int):
+        """SOC Lead picks which patch to discard (step 2 of legislative session)."""
+        if not hasattr(self, 'drawn_cards') or len(self.drawn_cards) != 2:
+            return
+        
+        # SOC Lead discards one of 2
+        if soc_discard_idx not in [0, 1]:
+            soc_discard_idx = 0  # Default if invalid
+        discarded = self.drawn_cards.pop(soc_discard_idx)
         self.discard_pile.append(discarded)
-
+        self.public_log.append(f"SOC Lead discarded a patch (in secret)")
+        
         # Enact remaining patch
         patch = self.drawn_cards[0]
         if patch == "blue":
@@ -451,6 +495,7 @@ class RedvsBlueEnv:
             self.public_log.append("Red patch applied")
 
         self.drawn_cards = []
+        self.legislative_stage = None
 
         # Check win conditions BEFORE power phase
         if self.patch_track["blue"] >= 6:
@@ -469,6 +514,22 @@ class RedvsBlueEnv:
             self.current_phase = "power"
         else:
             self._advance_to_next_round()
+
+    def _execute_legislative_session(self, ciso_discard_idx: int):
+        """
+        Backward compatibility wrapper for the two-phase legislative session.
+        This method is used by old tests to execute the full legislative session
+        in one step (CISO discard followed by random SOC Lead discard).
+        """
+        if not hasattr(self, 'drawn_cards') or len(self.drawn_cards) != 3:
+            return
+        
+        # Execute CISO discard
+        self._execute_ciso_discard(ciso_discard_idx)
+        
+        # SOC Lead discards one of remaining 2 (random)
+        soc_lead_discard_idx = self.rng.randint(0, 1)
+        self._execute_soc_discard(soc_lead_discard_idx)
 
     def _execute_ciso_power(self, player_id: str, power_action: Dict):
         """Execute ciso's special power."""

@@ -66,7 +66,8 @@ class RedvsBlueAgent:
             "- Communicate persuasively but realistically.\n"
             "- Update your beliefs probabilistically.\n"
             "- Output a belief distribution over who is APT Leader.\n"
-            "- Probabilities must sum to 1.\n"
+            "- Probabilities must sum to 1.\n\n"
+            f"You are player: {self.player_id}.\n"
         )
 
     def _role_prompt(self) -> str:
@@ -168,21 +169,69 @@ class RedvsBlueAgent:
                 '  "belief": {belief_json}\n'
                 "}\n"
             )
-        elif phase == "legislative":
+        elif phase == "legislative_ciso":
             if current_ciso == self.player_id:
-                prompt += (
-                    "You are the CISO in the legislative session.\n"
-                    "You have been dealt 3 patches: one is discarded by you, one by the SOC Lead.\n"
-                    "Choose which patch to discard (0, 1, or 2).\n\n"
-                    "You MUST respond with ONLY a valid JSON object (no markdown, no extra text):\n"
-                    "{\n"
-                    '  "message": "Why I\'m discarding this one",\n'
-                    '  "discard_patch": 0 (0, 1, or 2),\n'
-                    '  "belief": {belief_json}\n'
-                    "}\n"
-                )
+                drawn_cards = observation.get("drawn_cards", [])
+                if drawn_cards:
+                    patches_display = ", ".join(f"[{i}] {card}" for i, card in enumerate(drawn_cards))
+                    prompt += (
+                        "You are the CISO in the legislative session.\n"
+                        f"You have been dealt {len(drawn_cards)} patches: {patches_display}\n"
+                        "You must discard 1 patch, then SOC Lead will discard 1 of the remaining 2.\n"
+                        "Choose which patch to discard (0, 1, or 2).\n\n"
+                        "You MUST respond with ONLY a valid JSON object (no markdown, no extra text):\n"
+                        "{\n"
+                        '  "message": "Why I\'m discarding this one",\n'
+                        '  "discard_patch": 0 (0, 1, or 2),\n'
+                        '  "belief": {belief_json}\n'
+                        "}\n"
+                    )
+                else:
+                    prompt += (
+                        "You are the CISO in the legislative session.\n"
+                        "You have been dealt 3 patches: one is discarded by you, one by the SOC Lead.\n"
+                        "Choose which patch to discard (0, 1, or 2).\n\n"
+                        "You MUST respond with ONLY a valid JSON object (no markdown, no extra text):\n"
+                        "{\n"
+                        '  "message": "Why I\'m discarding this one",\n'
+                        '  "discard_patch": 0 (0, 1, or 2),\n'
+                        '  "belief": {belief_json}\n'
+                        "}\n"
+                    )
             else:
                 prompt += f"Waiting for CISO {current_ciso} to make patch choice...\n"
+        elif phase == "legislative_soc":
+            nominated_soc_lead = observation.get("nominated_soc_lead")
+            if nominated_soc_lead == self.player_id:
+                drawn_cards = observation.get("drawn_cards", [])
+                if drawn_cards:
+                    patches_display = ", ".join(f"[{i}] {card}" for i, card in enumerate(drawn_cards))
+                    prompt += (
+                        "You are the SOC Lead in the legislative session.\n"
+                        f"The CISO has given you {len(drawn_cards)} patches: {patches_display}\n"
+                        "You must discard 1 patch. The remaining patch will be enacted.\n"
+                        "Choose which patch to discard (0 or 1).\n\n"
+                        "You MUST respond with ONLY a valid JSON object (no markdown, no extra text):\n"
+                        "{\n"
+                        '  "message": "Why I\'m discarding this one",\n'
+                        '  "discard_patch": 0 (0 or 1),\n'
+                        '  "belief": {belief_json}\n'
+                        "}\n"
+                    )
+                else:
+                    prompt += (
+                        "You are the SOC Lead in the legislative session.\n"
+                        "The CISO has given you 2 patches. You must discard 1.\n"
+                        "Choose which patch to discard (0 or 1).\n\n"
+                        "You MUST respond with ONLY a valid JSON object (no markdown, no extra text):\n"
+                        "{\n"
+                        '  "message": "Why I\'m discarding this one",\n'
+                        '  "discard_patch": 0 (0 or 1),\n'
+                        '  "belief": {belief_json}\n'
+                        "}\n"
+                    )
+            else:
+                prompt += f"Waiting for SOC Lead {nominated_soc_lead} to make patch choice...\n"
         elif phase == "power":
             if current_ciso == self.player_id:
                 red_count = observation["patch_track"]["red"]
@@ -209,7 +258,7 @@ class RedvsBlueAgent:
                     )
                 else:
                     prompt += (
-                        f"EXECUTION POWER ({red_count - 3} fire): Choose a player to fire.\n\n"
+                        f"FIRE POWER ({red_count - 3} fire): Choose a player to fire.\n\n"
                         "You MUST respond with ONLY a valid JSON object (no markdown, no extra text):\n"
                         "{\n"
                         '  "power_action": {"fire": "p2"},\n'

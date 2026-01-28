@@ -75,11 +75,10 @@ def collect_results(results_dir: Path) -> pd.DataFrame:
                 "value": scores.get("red_vs_blue_scorer", {}).get("value", 0),  # 1 = libs win, 0 = reds
             }
 
-            # Flatten metadata
+            # Flatten metadata - include both simple and complex fields
             for k, v in metadata.items():
-                if k not in ["model", "roles", "public_log", "voting_history", "fired_players", "belief_histories"]:
-                    # Skip non-numeric and complex fields
-                    if isinstance(v, (int, float)):
+                if k not in ["model", "public_log"]:  # Keep roles, voting_history, belief_histories, patch_track
+                    if isinstance(v, (int, float, dict, list, bool, str)):
                         record[k] = v
 
             # Extract token usage from model_usage field

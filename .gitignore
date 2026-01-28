@@ -1,3 +1,7 @@
+
+*.eval
+results/
+executive_summary.md
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
@@ -208,3 +212,4 @@ __marimo__/
 
 # Snyk Security Extension - AI Rules (auto-generated)
 .github/instructions/snyk_rules.instructions.md
+results/figures/*.pdf

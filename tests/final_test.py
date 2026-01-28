@@ -153,9 +153,16 @@ while not env.done and round_count < max_attempts:
             vote = "yes" if i < 3 else "no"
             env.step(p, {"vote": vote})
         env.end_round()
-    elif env.current_phase == "legislative":
+    elif env.current_phase in ["legislative_ciso", "legislative"]:
+        # Handle both old "legislative" and new "legislative_ciso" phases
         ciso = env.player_ids[env.current_ciso_idx]
         env.step(ciso, {'discard_patch': 0})
+        env.end_round()
+    elif env.current_phase == "legislative_soc":
+        # New SOC Lead phase
+        soc_lead = env.nominated_soc_lead
+        if soc_lead:
+            env.step(soc_lead, {'discard_patch': 0})
         env.end_round()
     elif env.current_phase == "power":
         ciso = env.player_ids[env.current_ciso_idx]
