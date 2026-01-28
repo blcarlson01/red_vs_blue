@@ -211,6 +211,7 @@ This will:
 5. ✓ Create infographics
 6. ✓ Generate interactive HTML viewer
 7. ✓ Analyze player confusion patterns
+8. ✓ Analyze player strategies
 
 **Options:**
 
@@ -218,10 +219,13 @@ This will:
 # Skip confusion analysis (if model unavailable)
 python -m red_vs_blue.analysis.run_all_analysis results/ --skip-confusion
 
+# Skip strategy analysis (if model unavailable)
+python -m red_vs_blue.analysis.run_all_analysis results/ --skip-strategy
+
 # Run only specific analyses
 python -m red_vs_blue.analysis.run_all_analysis results/ --only aggregate,statistics,plots
 
-# Use a custom model for confusion analysis
+# Use a custom model for confusion and strategy analysis
 python -m red_vs_blue.analysis.run_all_analysis results/ --model anthropic/claude-opus
 
 # With custom model base URL
@@ -238,6 +242,7 @@ python -m red_vs_blue.analysis.run_all_analysis results/ \
 - `infographics` - Create infographic visualizations
 - `viewer` - Interactive HTML results viewer
 - `confusion` - LLM-based player confusion analysis
+- `strategy` - LLM-based player strategy analysis
 
 ### Individual Analysis Tools
 
@@ -264,6 +269,9 @@ python -m red_vs_blue.analysis.results_viewer results/your_eval_file.eval result
 
 # Confusion analysis (requires model)
 python -m red_vs_blue.analysis.confusion_analysis results/your_eval_file.eval [model_name]
+
+# Strategy analysis (requires model)
+python -m red_vs_blue.analysis.strategy_analysis results/your_eval_file.eval [model_name]
 ```
 
 ## Plots

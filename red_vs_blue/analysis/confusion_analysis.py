@@ -318,6 +318,121 @@ async def analyze_game(game_num: int, sample_data: Dict, model) -> Dict[str, Any
     }
 
 
+def generate_confusion_markdown_report(all_results: List[Dict]) -> str:
+    """Generate a markdown report from confusion analysis results."""
+    md = []
+    
+    # Header
+    md.append("# Confusion Analysis Report")
+    md.append("")
+    
+    # Executive Summary
+    total_confused = sum(r["confused_count"] for r in all_results)
+    total_players = sum(len(r["game_context"]["roles"]) for r in all_results)
+    confusion_rate = (total_confused / total_players * 100) if total_players > 0 else 0
+    
+    md.append("## Executive Summary")
+    md.append("")
+    md.append(f"- **Games Analyzed**: {len(all_results)}")
+    md.append(f"- **Total Players**: {total_players}")
+    md.append(f"- **Confused Players**: {total_confused} ({confusion_rate:.1f}%)")
+    md.append("")
+    
+    if confusion_rate == 0:
+        md.append("### Key Finding")
+        md.append("No player confusion was detected in the analyzed games. Players demonstrated clear understanding of game rules, state, and strategy.")
+    elif confusion_rate > 50:
+        md.append("### Key Finding")
+        md.append(f"High confusion rates ({confusion_rate:.0f}%) suggest potential issues with game clarity or complexity.")
+    else:
+        md.append("### Key Finding")
+        md.append(f"Moderate confusion rates ({confusion_rate:.0f}%) indicate some players struggled with specific aspects of the game.")
+    
+    md.append("")
+    md.append("---")
+    md.append("")
+    
+    # Per-Game Analysis
+    md.append("## Per-Game Analysis")
+    md.append("")
+    
+    for result in all_results:
+        game_num = result.get("game_num", "?")
+        game_context = result.get("game_context", {})
+        player_analysis = result.get("player_analysis", {})
+        confused_count = result.get("confused_count", 0)
+        improvements = result.get("improvements", {})
+        
+        total_game_players = len(game_context.get("roles", {}))
+        
+        md.append(f"### Game {game_num}")
+        md.append("")
+        md.append(f"- **Result**: {'Blues Won' if game_context.get('blues_win') else 'Reds Won'}")
+        md.append(f"- **Rounds**: {game_context.get('rounds_played', 0)}")
+        md.append(f"- **Patches**: Blue {game_context.get('patch_track', {}).get('blue', 0)}/6, Red {game_context.get('patch_track', {}).get('red', 0)}/11")
+        md.append(f"- **Confused Players**: {confused_count}/{total_game_players}")
+        md.append("")
+        
+        # Confused players in this game
+        confused_players = [pid for pid, analysis in player_analysis.items() if analysis.get("confused")]
+        if confused_players:
+            md.append("#### Confused Players")
+            md.append("")
+            for player_id in sorted(confused_players):
+                analysis = player_analysis[player_id]
+                role = game_context.get("roles", {}).get(player_id, "unknown")
+                md.append(f"**{player_id}** ({role})")
+                md.append(f"- Confusion Types: {', '.join(analysis.get('confusion_types', ['Unknown']))}")
+                md.append(f"- Explanation: {analysis.get('explanation', 'N/A')}")
+                if analysis.get("evidence"):
+                    md.append(f"- Evidence: \"{analysis['evidence'][0]}\"")
+                md.append("")
+        else:
+            md.append("#### Confusion Status")
+            md.append("No player confusion detected in this game.")
+            md.append("")
+        
+        # Improvement suggestions
+        if improvements.get("improvement_suggestions"):
+            md.append("#### Suggested Improvements")
+            md.append("")
+            md.append(f"Overall Confusion Level: **{improvements.get('overall_confusion_level', 'unknown').upper()}**")
+            md.append("")
+            for suggestion in improvements.get("improvement_suggestions", []):
+                category = suggestion.get("category", "General")
+                suggestion_text = suggestion.get("suggestion", "N/A")
+                rationale = suggestion.get("rationale", "N/A")
+                md.append(f"**[{category}]** {suggestion_text}")
+                md.append(f"- Rationale: {rationale}")
+                md.append("")
+        
+        md.append("---")
+        md.append("")
+    
+    # Confusion Type Summary
+    md.append("## Confusion Types Summary")
+    md.append("")
+    
+    confusion_types = {}
+    for result in all_results:
+        for player_analysis in result.get("player_analysis", {}).values():
+            if player_analysis.get("confused"):
+                for confusion_type in player_analysis.get("confusion_types", []):
+                    confusion_types[confusion_type] = confusion_types.get(confusion_type, 0) + 1
+    
+    if confusion_types:
+        md.append("Most common sources of player confusion:")
+        md.append("")
+        for confusion_type, count in sorted(confusion_types.items(), key=lambda x: x[1], reverse=True):
+            md.append(f"- **{confusion_type}**: {count} instances")
+        md.append("")
+    else:
+        md.append("No confusion detected across all games.")
+        md.append("")
+    
+    return "\n".join(md)
+
+
 async def main(eval_file: str, model_name: str = "ollama/gpt-oss:20b"):
     """Main function to analyze all games in an eval file."""
     
@@ -372,6 +487,14 @@ async def main(eval_file: str, model_name: str = "ollama/gpt-oss:20b"):
         json.dump(all_results, f, indent=2, default=str)
     
     print(f"\nDetailed results saved to: {output_file}")
+    
+    # Generate and save markdown report
+    markdown_report = generate_confusion_markdown_report(all_results)
+    markdown_file = eval_path.parent / f"confusion_analysis_{eval_path.stem}.md"
+    with open(markdown_file, "w", encoding="utf-8") as f:
+        f.write(markdown_report)
+    
+    print(f"Markdown report saved to: {markdown_file}")
 
 
 if __name__ == "__main__":

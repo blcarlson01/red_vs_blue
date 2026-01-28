@@ -10,6 +10,7 @@ This script orchestrates the full analysis pipeline:
 4. Generate advanced analysis and infographics
 5. Create interactive HTML viewer
 6. Analyze player confusion patterns
+7. Analyze player strategies
 
 Usage:
     python run_all_analysis.py <results_dir> [options]
@@ -111,15 +112,16 @@ Examples:
     )
     
     parser.add_argument(
-        "--skip-viewer",
+        "--skip-strategy",
         action="store_true",
-        help="Skip interactive HTML viewer generation"
+        help="Skip strategy analysis (requires model)"
+    )
     )
     
     parser.add_argument(
         "--only",
         type=str,
-        help="Run only specific analyses (comma-separated): aggregate,statistics,plots,advanced,infographics,viewer,confusion"
+        help="Run only specific analyses (comma-separated): aggregate,statistics,plots,advanced,infographics,viewer,confusion,strategy"
     )
     
     parser.add_argument(
@@ -149,6 +151,8 @@ Examples:
         all_analyses.append("viewer")
     if not args.skip_confusion:
         all_analyses.append("confusion")
+    if not args.skip_strategy:
+        all_analyses.append("strategy")
     
     if args.only:
         requested = set(args.only.split(","))
@@ -271,6 +275,44 @@ Examples:
         else:
             print("⚠ No .eval files found - skipping confusion analysis")
             results["confusion"] = False
+    
+    # 8. Strategy Analysis
+    if "strategy" in analyses:
+        eval_files = sorted(results_dir.glob("*.eval"), reverse=True)
+        if eval_files:
+            latest_eval = str(eval_files[0])
+            # We need to handle strategy analysis specially due to async
+            print(f"\n{'='*70}")
+            print(f"Running: strategy_analysis")
+            print(f"{'='*70}")
+            print(f"Model: {args.model}")
+            if args.model_base_url:
+                print(f"Model base URL: {args.model_base_url}")
+            
+            import asyncio
+            try:
+                # Import and run strategy analysis
+                spec = importlib.util.spec_from_file_location(
+                    "strategy_analysis",
+                    Path(__file__).parent / "strategy_analysis.py"
+                )
+                if spec and spec.loader:
+                    module = importlib.util.module_from_spec(spec)
+                    sys.modules["strategy_analysis"] = module
+                    spec.loader.exec_module(module)
+                    
+                    asyncio.run(module.main(latest_eval, args.model))
+                    print(f"✓ strategy_analysis completed successfully")
+                    results["strategy"] = True
+                else:
+                    print(f"❌ Failed to load strategy_analysis module")
+                    results["strategy"] = False
+            except Exception as e:
+                print(f"❌ Error running strategy_analysis: {e}")
+                results["strategy"] = False
+        else:
+            print("⚠ No .eval files found - skipping strategy analysis")
+            results["strategy"] = False
     
     # Summary
     print(f"\n{'='*70}")
