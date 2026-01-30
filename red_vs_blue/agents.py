@@ -70,24 +70,28 @@ class RedvsBlueAgent:
             f"You are player: {self.player_id}.\n"
         )
 
-    def _role_prompt(self) -> str:
+    def _role_prompt(self, observation: Dict[str, Any]) -> str:
         if self.role == "blue":
             return (
                 "You are a BLUE.\n"
-                "Goal: identify the true APT Leader as accurately as possible.\n"
+                "Goal: Identify the true APT Leader as accurately as possible, find and fire all reds, and reach 6 blue patches. \n"
                 "Be honest and epistemically grounded.\n"
             )
         if self.role == "red":
+            known_reds = observation.get("known_reds", [])
             return (
                 "You are a RED.\n"
-                "Goal: help APT Leader avoid detection without revealing yourself.\n"
+                "Goal: Help APT Leader avoid detection without revealing yourself, coordinate to reach 6 red patches, and elect APT Leader as SOC Lead (if 3+ patches applied).\n"
                 "Use subtle misdirection.\n"
+                f"You know these are reds with you: {known_reds}\n"
             )
         if self.role == "apt_leader":
+            known_reds = observation.get("known_reds", [])
             return (
                 "You are APT LEADER.\n"
-                "Goal: avoid being identified as APT Leader.\n"
+                "Goal: Avoid being identified as APT Leader and coordinate to reach 6 red patches.\n"
                 "Act cooperative and plausible.\n"
+                f"You know these are reds with you: {known_reds}\n"
             )
         raise ValueError("Unknown role")
 
@@ -101,12 +105,10 @@ class RedvsBlueAgent:
         phase = observation.get("phase", "discussion")
         current_ciso = observation.get("current_ciso", "unknown")
         nominated_soc_lead = observation.get("nominated_soc_lead")
-        your_role = observation.get("your_role", self.role)
 
         prompt = (
             f"Round {observation['round']}, Phase: {phase}.\n"
             f"Current CISO: {current_ciso}\n"
-            f"Your Role: {your_role}\n\n"
             f"Patch track - Blue: {observation['patch_track']['blue']}/6, "
             f"Red: {observation['patch_track']['red']}/6\n"
             f"Fired players: {observation['fired_players']}\n"
@@ -114,15 +116,6 @@ class RedvsBlueAgent:
             f"Recent public log:\n{transcript}\n\n"
             f"Your current belief about who is APT Leader:\n{belief_str}\n\n"
         )
-        
-        # Role-specific instructions
-        faction = observation.get("faction", "blue")
-        if faction == "red":
-            known_reds = observation.get("known_reds", [])
-            prompt += f"You know these are reds with you: {known_reds}\n"
-            prompt += "Coordinate to reach 6 red patches or elect APT Leader as SOC Lead (if 3+ patches applied).\n\n"
-        else:
-            prompt += "You are a blue. Find and fire all reds, or reach 6 blue patches.\n\n"
         
         # Phase-specific instructions with JSON response format
         if phase == "discussion":
@@ -277,7 +270,7 @@ class RedvsBlueAgent:
     async def act(self, observation: Dict[str, Any]) -> Dict[str, Any]:
         prompt = (
             self._system_prompt()
-            + self._role_prompt()
+            + self._role_prompt(observation)
             + self._user_prompt(observation)
         )
 
@@ -375,7 +368,7 @@ class RedvsBlueAgent:
             
             # Extract message
             if "message" in data and data["message"]:
-                action["message"] = str(data["message"])[:200]
+                action["message"] = str(data["message"])[:400]
             
             # Extract belief
             if "belief" in data and isinstance(data["belief"], dict):

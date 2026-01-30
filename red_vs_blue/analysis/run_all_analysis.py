@@ -116,6 +116,11 @@ Examples:
         action="store_true",
         help="Skip strategy analysis (requires model)"
     )
+    
+    parser.add_argument(
+        "--skip-viewer",
+        action="store_true",
+        help="Skip viewer generation"
     )
     
     parser.add_argument(

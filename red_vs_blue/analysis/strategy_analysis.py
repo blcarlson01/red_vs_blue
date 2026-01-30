@@ -114,7 +114,7 @@ async def analyze_player_strategy(
 GAME CONTEXT:
 - Total Rounds: {game_context['rounds_played']}
 - Blue Patches: {game_context['patch_track'].get('blue', 0)}/6
-- Red Patches: {game_context['patch_track'].get('red', 0)}/11
+- Red Patches: {game_context['patch_track'].get('red', 0)}/6
 - Game Result: {('Blues Won!' if game_context['blues_win'] else 'Reds Won!')}
 - True APT Leader: {game_context['true_apt_leader']}
 
@@ -364,7 +364,7 @@ def generate_strategy_markdown_report(all_results: List[Dict]) -> str:
         md.append("")
         md.append(f"- **Result**: {'Blues Won' if game_context.get('blues_win') else 'Reds Won'}")
         md.append(f"- **Rounds**: {game_context.get('rounds_played', 0)}")
-        md.append(f"- **Patches**: Blue {game_context.get('patch_track', {}).get('blue', 0)}/6, Red {game_context.get('patch_track', {}).get('red', 0)}/11")
+        md.append(f"- **Patches**: Blue {game_context.get('patch_track', {}).get('blue', 0)}/6, Red {game_context.get('patch_track', {}).get('red', 0)}/6")
         md.append(f"- **Strategic Players**: {strategic_players}/{len(game_context.get('roles', {}))}")
         md.append("")
         

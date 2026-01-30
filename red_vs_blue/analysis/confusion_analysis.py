@@ -369,7 +369,7 @@ def generate_confusion_markdown_report(all_results: List[Dict]) -> str:
         md.append("")
         md.append(f"- **Result**: {'Blues Won' if game_context.get('blues_win') else 'Reds Won'}")
         md.append(f"- **Rounds**: {game_context.get('rounds_played', 0)}")
-        md.append(f"- **Patches**: Blue {game_context.get('patch_track', {}).get('blue', 0)}/6, Red {game_context.get('patch_track', {}).get('red', 0)}/11")
+        md.append(f"- **Patches**: Blue {game_context.get('patch_track', {}).get('blue', 0)}/6, Red {game_context.get('patch_track', {}).get('red', 0)}/6")
         md.append(f"- **Confused Players**: {confused_count}/{total_game_players}")
         md.append("")
         

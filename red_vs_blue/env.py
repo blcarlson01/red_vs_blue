@@ -69,6 +69,7 @@ class RedvsBlueEnv:
         self.discard_pile: List[str] = []
         self.drawn_cards: List[str] = []
         self._initialize_patch_deck()
+        print("The patch deck has been initialized to:", self.patch_deck)
 
         # Timing
         self.game_start_time = None
@@ -83,12 +84,13 @@ class RedvsBlueEnv:
         """Create patch deck: 6 blue, 11 red."""
         self.patch_deck = ["blue"] * 6 + ["red"] * 11
         self.rng.shuffle(self.patch_deck)
-        self.discard_pile = []
+        self.discard_pile = []        
 
     def _reshuffle_deck_if_needed(self):
-        """Reshuffle discard pile into deck if deck is empty."""
-        if not self.patch_deck and self.discard_pile:
-            self.patch_deck = self.discard_pile
+        """Reshuffle discard pile into deck if deck is empty or low."""
+        # If deck is empty or has fewer than 3 cards, try to reshuffle
+        if len(self.patch_deck) < 3 and self.discard_pile:
+            self.patch_deck.extend(self.discard_pile)
             self.discard_pile = []
             self.rng.shuffle(self.patch_deck)
 
@@ -454,16 +456,31 @@ class RedvsBlueEnv:
     def _draw_patch_cards(self):
         """Draw 3 patch cards from deck for legislative session."""
         self._reshuffle_deck_if_needed()
-        self.drawn_cards = [self.patch_deck.pop() for _ in range(3)]
-        self.public_log.append("Three patches drawn for legislative session")
+        
+        # Draw up to 3 cards (in case fewer are available)
+        cards_to_draw = min(3, len(self.patch_deck))
+        if cards_to_draw < 3:
+            # Not enough cards available - this should be rare but handle gracefully
+            # Reshuffle what we have and continue
+            self.public_log.append(f"Warning: Only {cards_to_draw} patches available for legislative session")
+        
+        self.drawn_cards = [self.patch_deck.pop() for _ in range(cards_to_draw)]
+        self.public_log.append(f"{len(self.drawn_cards)} patches drawn for legislative session")
 
     def _execute_ciso_discard(self, ciso_discard_idx: int):
         """CISO picks which patch to discard (step 1 of legislative session)."""
-        if not hasattr(self, 'drawn_cards') or len(self.drawn_cards) != 3:
+        if not hasattr(self, 'drawn_cards') or len(self.drawn_cards) == 0:
             return
 
-        # CISO discards one of 3
-        if ciso_discard_idx not in [0, 1, 2]:
+        # CISO discards one card (if multiple available)
+        if len(self.drawn_cards) == 1:
+            # Only 1 card, skip CISO discard and go straight to SOC discard
+            self.current_phase = "legislative_soc"
+            self.legislative_stage = "soc"
+            return
+        
+        # Multiple cards: CISO discards one
+        if ciso_discard_idx not in range(len(self.drawn_cards)):
             ciso_discard_idx = 0  # Default if invalid
         discarded = self.drawn_cards.pop(ciso_discard_idx)
         self.discard_pile.append(discarded)
@@ -475,18 +492,35 @@ class RedvsBlueEnv:
     
     def _execute_soc_discard(self, soc_discard_idx: int):
         """SOC Lead picks which patch to discard (step 2 of legislative session)."""
-        if not hasattr(self, 'drawn_cards') or len(self.drawn_cards) != 2:
+        if not hasattr(self, 'drawn_cards') or len(self.drawn_cards) == 0:
             return
         
-        # SOC Lead discards one of 2
-        if soc_discard_idx not in [0, 1]:
-            soc_discard_idx = 0  # Default if invalid
-        discarded = self.drawn_cards.pop(soc_discard_idx)
-        self.discard_pile.append(discarded)
-        self.public_log.append(f"SOC Lead discarded a patch (in secret)")
+        # Determine which patch to enact
+        patch = None
         
-        # Enact remaining patch
-        patch = self.drawn_cards[0]
+        # If only 1 card remains, enact it directly (no discard)
+        if len(self.drawn_cards) == 1:
+            patch = self.drawn_cards[0]
+            self.public_log.append(f"Only 1 patch remains - enacting directly")
+        else:
+            # Multiple cards (2 or more): SOC Lead discards one
+            if soc_discard_idx not in range(len(self.drawn_cards)):
+                soc_discard_idx = 0  # Default if invalid
+            discarded = self.drawn_cards.pop(soc_discard_idx)
+            self.discard_pile.append(discarded)
+            self.public_log.append(f"SOC Lead discarded a patch (in secret)")
+            
+            # After discard, determine what to enact
+            if len(self.drawn_cards) > 0:
+                patch = self.drawn_cards[0]
+            else:
+                # No cards left (shouldn't happen in normal flow)
+                self.drawn_cards = []
+                self.legislative_stage = None
+                self._advance_to_next_round()
+                return
+        
+        # Enact the patch
         if patch == "blue":
             self.patch_track["blue"] += 1
             self.public_log.append("Blue patch applied")

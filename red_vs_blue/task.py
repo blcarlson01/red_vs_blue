@@ -421,13 +421,13 @@ async def generate_executive_summary_with_llm(model, metadata: dict, env: RedvsB
     
     # Determine winner
     if blues_win:
-        winner = "🟦 Blues"
+        winner = "[BLUE] Blues"
         outcome = "BLUE VICTORY"
     elif reds_win:
-        winner = "🟥 Reds"
+        winner = "[RED] Reds"
         outcome = "RED VICTORY"
     else:
-        winner = "❓ Draw"
+        winner = "[?] Draw"
         outcome = "GAME TIMEOUT"
     
     # Count role distribution
@@ -538,7 +538,7 @@ INSTRUCTIONS:
 
 ### Patch Track
 - **Blue Patches**: {patch_track.get('blue', 0)}/6
-- **Red Patches**: {patch_track.get('red', 0)}/11
+- **Red Patches**: {patch_track.get('red', 0)}/6
 
 ### Firings
 - **Fired Players**: {', '.join(fired_players) if fired_players else 'None'}
@@ -574,7 +574,7 @@ INSTRUCTIONS:
     # Add per-player narratives
     for player_id in sorted(roles.keys()):
         role = roles[player_id]
-        status = "🔴 Fired" if player_id in fired_players else "🟢 Employed"
+        status = "[X] Fired" if player_id in fired_players else "[O] Employed"
         summary += f"### {player_id} ({role}) - {status}\n\n"
         summary += f"{player_narratives.get(player_id, '[Analysis unavailable]')}\n\n"
     
@@ -780,8 +780,8 @@ def red_vs_blue_task(
             game_results = await _run_game_loop(env, agents)
             
             # Show game outcome
-            outcome = "🟦 BLUE WIN" if game_results["blues_win"] else ("🟥 RED WIN" if game_results["reds_win"] else "❓ DRAW")
-            print(f"\n✅ Game Complete: {outcome} (Rounds: {game_results['rounds']})", flush=True)
+            outcome = "[BLUE] BLUE WIN" if game_results["blues_win"] else ("[RED] RED WIN" if game_results["reds_win"] else "[?] DRAW")
+            print(f"\n[OK] Game Complete: {outcome} (Rounds: {game_results['rounds']})", flush=True)
             sys.stdout.flush()
             
             # Store game results in state output for scorer to access
