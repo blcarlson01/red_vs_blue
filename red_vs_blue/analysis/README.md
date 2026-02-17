@@ -10,6 +10,12 @@ This directory contains tools for analyzing and reviewing Red vs. Blue benchmark
 - **advanced_infographics.py** - Publication-ready infographics and visualizations
 - **plots.py** - Visualization utilities for benchmark metrics
 - **statistics.py** - Statistical significance testing
+- **action_efficiency_analysis.py** - Player action efficiency and decision quality analysis
+- **risk_management_analysis.py** - Player risk awareness and mitigation analysis
+- **collaboration_quality_analysis.py** - Player collaboration and coalition quality analysis
+- **role_utilization_analysis.py** - Role alignment and role-objective utilization analysis
+- **outcome_attribution_analysis.py** - Player-level outcome contribution attribution
+- **cross_analysis_findings.py** - Cross-cutting synthesis across analysis dimensions
 
 ## Quick Start
 
@@ -124,6 +130,43 @@ Output includes:
 - Game improvement suggestions by category (Rules/Information/Strategy/Tutorial)
 - Confusion statistics across all games
 - Actionable recommendations for rules/UI/documentation improvements
+
+## Additional Player Analysis Tools
+
+The following tools follow the same execution pattern as `confusion_analysis.py` and `strategy_analysis.py`:
+
+```bash
+# Action efficiency
+python -m red_vs_blue.analysis.action_efficiency_analysis results/game.eval [model_name]
+
+# Risk management
+python -m red_vs_blue.analysis.risk_management_analysis results/game.eval [model_name]
+
+# Collaboration quality
+python -m red_vs_blue.analysis.collaboration_quality_analysis results/game.eval [model_name]
+
+# Role utilization
+python -m red_vs_blue.analysis.role_utilization_analysis results/game.eval [model_name]
+
+# Outcome attribution
+python -m red_vs_blue.analysis.outcome_attribution_analysis results/game.eval [model_name]
+
+# Cross-analysis findings
+python -m red_vs_blue.analysis.cross_analysis_findings results/game.eval [model_name]
+```
+
+Each script:
+- Loads one `.eval` file
+- Analyzes each game (and usually each player) with an LLM
+- Writes a detailed JSON file and a human-readable Markdown report
+
+In `run_all_analysis.py`, these can be run via `--only` using:
+- `action_efficiency`
+- `risk_management`
+- `collaboration_quality`
+- `role_utilization`
+- `outcome_attribution`
+- `cross_findings`
 
 ### Generating Publication-Ready Infographics
 

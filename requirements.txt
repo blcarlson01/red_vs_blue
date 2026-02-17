@@ -1,6 +1,13 @@
+cmake>=3.28
+ninja>=1.11
 inspect-ai
 numpy
 pandas
 matplotlib
 scipy
 openai
+polarix>=0.1.0; python_version < "3.14"
+seaborn>=0.12.0
+pyyaml>=6.0
+#arize-phoenix>=3.0.0
+tqdm>=4.65.0

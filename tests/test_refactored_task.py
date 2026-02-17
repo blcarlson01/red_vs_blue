@@ -68,9 +68,9 @@ def test_metrics():
     print("✅ All metrics are callable")
     
     # Test that metrics have names
-    assert blue_metric.__name__ == "blue_win_rate"
-    assert red_metric.__name__ == "red_win_rate"
-    assert rounds_metric.__name__ == "avg_rounds"
+    assert blue_metric.__name__ == "blue_win_metric"
+    assert red_metric.__name__ == "red_win_metric"
+    assert rounds_metric.__name__ == "avg_rounds_played_metric"
     print("✅ All metrics have proper names")
 
 
@@ -108,7 +108,7 @@ def test_task_creation():
     print("✅ Task dataset samples have correct metadata")
 
 
-async def test_game_loop_fire():
+def test_game_loop_fire():
     """Test that the game loop structure is correct (simplified without full fire)."""
     print("\n" + "="*70)
     print("TEST 4: Game Loop Fire Structure")
@@ -161,8 +161,8 @@ def main():
         test_task_creation()
         test_task_architecture()
         
-        # Run async test
-        asyncio.run(test_game_loop_fire())
+        # Run structural game loop test
+        test_game_loop_fire()
         
         print("\n" + "="*70)
         print("✅ ALL REFACTORING TESTS PASSED!")

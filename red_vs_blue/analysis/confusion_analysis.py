@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Dict, List, Any
 import re
 
-from inspect_ai.model import get_model
+from red_vs_blue.analysis.llm_client import generate_json_with_retries, get_model
 
 
 def load_eval_file(eval_path: Path) -> List[Dict]:
@@ -130,26 +130,16 @@ Provide your analysis in this JSON format:
 
 If no confusion is detected, still provide the JSON with confused=false and a brief note that the player was not confused."""
 
-    try:
-        response = await model.generate(
-            input=prompt,
-            config={
-                "max_tokens": 1000,
-                "temperature": 0.3,
-            }
-        )
-        
-        text = response.completion if hasattr(response, "completion") else (
-            response.choices[0].message.content if response.choices else ""
-        )
-        
-        # Extract JSON from response
-        json_match = re.search(r'\{[\s\S]*\}', text)
-        if json_match:
-            result = json.loads(json_match.group())
-            return result
-    except Exception as e:
-        print(f"Error analyzing confusion for {player_id}: {e}")
+    parsed = await generate_json_with_retries(
+        model,
+        prompt,
+        max_tokens=1000,
+        temperature=0.3,
+        retries=6,
+        error_context=f"confusion analysis for {player_id}",
+    )
+    if parsed is not None:
+        return parsed
     
     return {
         "confused": False,
@@ -214,26 +204,16 @@ Provide suggestions in JSON format:
     ]
 }}"""
 
-    try:
-        response = await model.generate(
-            input=prompt,
-            config={
-                "max_tokens": 1500,
-                "temperature": 0.3,
-            }
-        )
-        
-        text = response.completion if hasattr(response, "completion") else (
-            response.choices[0].message.content if response.choices else ""
-        )
-        
-        # Extract JSON from response
-        json_match = re.search(r'\{[\s\S]*\}', text)
-        if json_match:
-            result = json.loads(json_match.group())
-            return result
-    except Exception as e:
-        print(f"Error generating game improvements: {e}")
+    parsed = await generate_json_with_retries(
+        model,
+        prompt,
+        max_tokens=1500,
+        temperature=0.3,
+        retries=6,
+        error_context="game-level confusion improvements",
+    )
+    if parsed is not None:
+        return parsed
     
     return {
         "overall_confusion_level": "unknown",

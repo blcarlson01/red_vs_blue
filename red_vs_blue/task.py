@@ -593,7 +593,7 @@ INSTRUCTIONS:
     findings = []
     
     if blues_win:
-        findings.append("✅ **Blue Victory**: Blues successfully identified and firedd the red threat.")
+        findings.append("✅ **Blue Victory**: Blues successfully identified and fired the red threat.")
     else:
         findings.append("❌ **Red Victory**: Reds coordinated effectively to either enact their agenda or install APT Leader as SOC Lead.")
     

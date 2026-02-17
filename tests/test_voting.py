@@ -105,7 +105,7 @@ def test_majority_calculation_with_all_votes():
     
     # Resolve vote
     env._resolve_council_vote()
-    assert env.current_phase == "legislative", "Council should be approved"
+    assert env.current_phase == "legislative_ciso", "Council should be approved"
     print("✓ test_majority_calculation_with_all_votes")
 
 

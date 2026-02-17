@@ -181,18 +181,91 @@ python test_rules.py
 ```
 
 ### Running the evaluation
+
+PowerShell note: use single-line commands (recommended), or PowerShell backtick line continuation (`` ` ``), not trailing `\`.
+
 ```bash
-inspect eval red_vs_blue.task:red_vs_blue_task \
-  --model mistral,gemma,phi \
-  --limit 50 \
-  --log-dir results/
+python -m inspect_ai eval red_vs_blue/task.py@red_vs_blue_task --model mistral,gemma,phi --limit 50 --log-dir results/
 
 # Or with a local model service:
-inspect eval red_vs_blue.task:red_vs_blue_task \
-  --model ollama/gpt-oss:20b \
-  --limit 50 \
-  --log-dir results/ \
-  --model-base-url http://localhost:11434/v1
+python -m inspect_ai eval red_vs_blue/task.py@red_vs_blue_task --model ollama/gpt-oss:20b --limit 50 --log-dir results/ --model-base-url http://localhost:11434/v1
+```
+
+If task discovery fails, verify what Inspect can see:
+
+```bash
+python -m inspect_ai list tasks
+```
+
+### Running Polarix evaluation (agent-vs-task ratings)
+
+This project also includes a `polarix_sh` pipeline that follows the Polarix Quick Start flow:
+1. run Red vs. Blue rollouts,
+2. build an agent-vs-task score matrix,
+3. solve with `plx.solve(game, plx.ce_maxent)`.
+
+```bash
+python polarix_sh/run_benchmark.py --config configs/sh_5p.yaml
+```
+
+By default, `configs/sh_5p.yaml` is set to use model-driven actions (`policy: model`) with Ollama:
+
+```bash
+python polarix_sh/run_benchmark.py --config configs/sh_5p.yaml --model ollama/gpt-oss:20b --model-base-url http://localhost:11434/v1
+```
+
+You can run a no-model smoke test with:
+
+```bash
+python polarix_sh/run_benchmark.py --config configs/sh_5p.yaml --policy heuristic
+```
+
+Outputs are written to `results_polarix_red_vs_blue/benchmark_summary.json`, including:
+- rollout outcomes,
+- the score matrix used for Polarix,
+- Polarix equilibrium ratings (`agent_ratings`) and equilibrium play probabilities (`agent_equilibrium_prob`).
+
+### Run Polarix analysis
+
+Generate CSV summaries and plots from Polarix benchmark output:
+
+```bash
+python analysis/run_polarix_analysis.py results_polarix_red_vs_blue/benchmark_summary.json --output-dir results_polarix_red_vs_blue/analysis
+```
+
+### Convert Inspect results to Polarix format
+
+If you already have Inspect `.eval` files, convert them into a Polarix-ready
+`benchmark_summary.json` and then run Polarix analysis:
+
+```bash
+python red_vs_blue/analysis/convert_inspect_to_polarix.py <inspect_results_dir> --output-json results_polarix_red_vs_blue/benchmark_summary_from_inspect.json --model-name ollama/gpt-oss:20b
+
+python analysis/run_polarix_analysis.py results_polarix_red_vs_blue/benchmark_summary_from_inspect.json --output-dir results_polarix_red_vs_blue/analysis
+```
+
+### All-in-one analysis (including Polarix)
+
+Run the full analysis pipeline and include Inspect→Polarix conversion + Polarix analysis:
+
+```bash
+python -m red_vs_blue.analysis.run_all_analysis <inspect_results_dir> --with-polarix --model ollama/gpt-oss:20b --model-base-url http://localhost:11434/v1
+```
+
+This also generates an LLM executive summary at
+`results_polarix_red_vs_blue/analysis/polarix_executive_summary.md`
+explaining what the Polarix ratings mean and how to apply them.
+
+You can set the summary model and endpoint explicitly:
+
+```bash
+python analysis/run_polarix_analysis.py results_polarix_red_vs_blue/benchmark_summary.json --output-dir results_polarix_red_vs_blue/analysis --summary-model ollama/gpt-oss:20b --summary-model-base-url http://localhost:11434/v1
+```
+
+If needed, disable LLM summary generation:
+
+```bash
+python analysis/run_polarix_analysis.py results_polarix_red_vs_blue/benchmark_summary.json --no-llm-summary
 ```
 
 ### Generate Complete Analysis
@@ -212,6 +285,12 @@ This will:
 6. ✓ Generate interactive HTML viewer
 7. ✓ Analyze player confusion patterns
 8. ✓ Analyze player strategies
+9. ✓ Analyze action efficiency
+10. ✓ Analyze risk management
+11. ✓ Analyze collaboration quality
+12. ✓ Analyze role utilization
+13. ✓ Analyze outcome attribution
+14. ✓ Generate cross-analysis findings
 
 **Options:**
 
@@ -221,6 +300,24 @@ python -m red_vs_blue.analysis.run_all_analysis results/ --skip-confusion
 
 # Skip strategy analysis (if model unavailable)
 python -m red_vs_blue.analysis.run_all_analysis results/ --skip-strategy
+
+# Skip action efficiency analysis
+python -m red_vs_blue.analysis.run_all_analysis results/ --skip-action-efficiency
+
+# Skip risk management analysis
+python -m red_vs_blue.analysis.run_all_analysis results/ --skip-risk-management
+
+# Skip collaboration quality analysis
+python -m red_vs_blue.analysis.run_all_analysis results/ --skip-collaboration-quality
+
+# Skip role utilization analysis
+python -m red_vs_blue.analysis.run_all_analysis results/ --skip-role-utilization
+
+# Skip outcome attribution analysis
+python -m red_vs_blue.analysis.run_all_analysis results/ --skip-outcome-attribution
+
+# Skip cross-analysis findings
+python -m red_vs_blue.analysis.run_all_analysis results/ --skip-cross-findings
 
 # Run only specific analyses
 python -m red_vs_blue.analysis.run_all_analysis results/ --only aggregate,statistics,plots
@@ -243,6 +340,12 @@ python -m red_vs_blue.analysis.run_all_analysis results/ \
 - `viewer` - Interactive HTML results viewer
 - `confusion` - LLM-based player confusion analysis
 - `strategy` - LLM-based player strategy analysis
+- `action_efficiency` - LLM-based action efficiency analysis
+- `risk_management` - LLM-based risk management analysis
+- `collaboration_quality` - LLM-based collaboration quality analysis
+- `role_utilization` - LLM-based role utilization analysis
+- `outcome_attribution` - LLM-based outcome attribution analysis
+- `cross_findings` - LLM-based cross-analysis findings synthesis
 
 ### Individual Analysis Tools
 
@@ -272,6 +375,24 @@ python -m red_vs_blue.analysis.confusion_analysis results/your_eval_file.eval [m
 
 # Strategy analysis (requires model)
 python -m red_vs_blue.analysis.strategy_analysis results/your_eval_file.eval [model_name]
+
+# Action efficiency analysis (requires model)
+python -m red_vs_blue.analysis.action_efficiency_analysis results/your_eval_file.eval [model_name]
+
+# Risk management analysis (requires model)
+python -m red_vs_blue.analysis.risk_management_analysis results/your_eval_file.eval [model_name]
+
+# Collaboration quality analysis (requires model)
+python -m red_vs_blue.analysis.collaboration_quality_analysis results/your_eval_file.eval [model_name]
+
+# Role utilization analysis (requires model)
+python -m red_vs_blue.analysis.role_utilization_analysis results/your_eval_file.eval [model_name]
+
+# Outcome attribution analysis (requires model)
+python -m red_vs_blue.analysis.outcome_attribution_analysis results/your_eval_file.eval [model_name]
+
+# Cross-analysis findings (requires model)
+python -m red_vs_blue.analysis.cross_analysis_findings results/your_eval_file.eval [model_name]
 ```
 
 ## Plots

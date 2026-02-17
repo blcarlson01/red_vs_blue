@@ -153,7 +153,7 @@ class TestPhaseTransitions:
         
         env.end_round()
         
-        assert env.current_phase == "legislative"
+        assert env.current_phase == "legislative_ciso"
         assert env.drawn_cards  # Cards should be drawn
         print("✓ Voting(approved)→Legislative transition test passed")
     

@@ -1,0 +1,17 @@
+task: polarix_sh.task:RedvsBluePolarixTask
+
+env:
+  num_players: 5
+  max_rounds: 10
+
+rollouts: 10
+policy: model
+model_base_url: http://localhost:11434/v1
+
+polarix:
+  normalizer: winrate
+
+models:
+  - ollama/gpt-oss:20b
+
+log_dir: results_polarix_red_vs_blue/
