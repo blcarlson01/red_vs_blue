@@ -7,13 +7,13 @@ Determines if each player followed a coherent strategy and names/describes it.
 """
 
 from __future__ import annotations
+
 import json
+import re
 import sys
-import glob
 import zipfile
 from pathlib import Path
-from typing import Dict, List, Any
-import re
+from typing import Any, Dict, List
 
 from red_vs_blue.analysis.llm_client import generate_json_with_retries, get_model
 
@@ -212,7 +212,7 @@ async def analyze_game(game_num: int, sample_data: Dict, model) -> Dict[str, Any
             strategic_players += 1
             strategy_name = analysis.get("strategy_name", "Unnamed")
             consistency = analysis.get("consistency_score", 0)
-            print(f"STRATEGIC")
+            print("STRATEGIC")
             print(f"  Strategy: {strategy_name} (consistency: {consistency:.1%})")
             print(f"  Description: {analysis.get('strategy_description', 'N/A')}")
             if analysis.get("contradictions"):

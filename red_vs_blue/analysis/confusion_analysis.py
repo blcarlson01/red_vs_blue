@@ -7,13 +7,13 @@ Provides suggestions for game improvements based on confusion patterns found.
 """
 
 from __future__ import annotations
+
 import json
+import re
 import sys
-import glob
 import zipfile
 from pathlib import Path
-from typing import Dict, List, Any
-import re
+from typing import Any, Dict, List
 
 from red_vs_blue.analysis.llm_client import generate_json_with_retries, get_model
 
@@ -267,7 +267,7 @@ async def analyze_game(game_num: int, sample_data: Dict, model) -> Dict[str, Any
             print("NOT CONFUSED")
     
     print(f"\n{'-'*70}")
-    print(f"GAME-LEVEL IMPROVEMENTS")
+    print("GAME-LEVEL IMPROVEMENTS")
     print(f"{'-'*70}")
     
     # Get game-level improvement suggestions

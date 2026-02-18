@@ -1,4 +1,9 @@
 {
     "snyk.advanced.autoSelectOrganization": true,
-    "snyk.advanced.organization": "f266ffa2-cc20-446b-8882-b763392e5cf9"
+    "snyk.advanced.organization": "f266ffa2-cc20-446b-8882-b763392e5cf9",
+    "python.testing.pytestArgs": [
+        "tests"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true
 }

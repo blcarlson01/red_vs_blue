@@ -1,6 +1,7 @@
 # polarix_sh/task.py
 
-from polarix.task import PolarixTask
+from polarix import PolarixTask
+
 from polarix_sh.env import PolarixRedvsBlueEnv
 
 
